@@ -1,10 +1,11 @@
 import fetch from 'node-fetch';
 //import shouldStringBeAllowed from './openAPI/moderation/moderate'
 import { config } from 'dotenv';
-import { chatCompletion, moderations } from './openAPI/index.js';
+import { chatCompletion } from './openAPI/index.js';
 import { makeRequestWithDelay } from './utils/makeRequest.js';
 import FormData from 'form-data';
 import axios from 'axios'
+
 
 config();
 const APIKey = process.env['API_KEY'];
@@ -152,17 +153,18 @@ fetch('https://tasks.aidevs.pl/token/liar', {
             })
             .then(async (response) => {
                 console.log('Response:', response.data);
+                const answer = response.data.answer
                 await chatCompletion({
                     messages: [{ role: 'user', content: 'Return YES or NO, uppercase. Is it true that for question: "' + liarQuestion + '" The answer might be: "' + response.data.answer + '".'}],
                     model: 'gpt-3.5-turbo',
                 }).then(async (response) => {
-                    console.log('Response2', response.choices[0].message.content)
+                    const answer = response.choices[0].message.content
                     const response4 = await makeRequestWithDelay(`https://tasks.aidevs.pl/answer/${token}`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
                         },
-                        body: JSON.stringify({answer: response.choices[0].message.content})
+                        body: JSON.stringify({answer: answer})
                     }, 10);
                     console.log('Answer from API', response4)
                 });
