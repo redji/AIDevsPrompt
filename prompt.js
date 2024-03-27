@@ -1,7 +1,7 @@
 import fetch from 'node-fetch';
 //import shouldStringBeAllowed from './openAPI/moderation/moderate'
 import { config } from 'dotenv';
-import { chatCompletion } from './openAPI/index.js';
+import { chatCompletion, embedding } from './openAPI/index.js';
 import { makeRequestWithDelay } from './utils/makeRequest.js';
 import FormData from 'form-data';
 import axios from 'axios'
@@ -14,6 +14,8 @@ let moderationAnswer = [];
 let blogAnswer = [];
 let liarQuestion = "";
 let liarAnswer = [];
+let inpromptAnswer = [];
+let embeddingAnswer = [];
 //helloApi
 fetch('https://tasks.aidevs.pl/token/helloapi', {
     method: 'POST',
@@ -175,5 +177,78 @@ fetch('https://tasks.aidevs.pl/token/liar', {
             });
         });
         });
+})
+.catch(error => console.error('Error:', error));
+inprompt
+fetch('https://tasks.aidevs.pl/token/inprompt', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({apikey: APIKey})
+})
+.then(async (response) => {
+    const data = await response.json();
+    const token = data.token;
+    const url = `https://tasks.aidevs.pl/task/${token}`;
+
+    const response2 = await makeRequestWithDelay(url, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    }, 10);
+    const input = response2.input;
+    const question = response2.question;
+
+    await chatCompletion({
+        messages: [{ role: 'user', content: input + question}],
+        model: 'gpt-3.5-turbo',
+    }).then(async (response) => {
+        inpromptAnswer = response.choices[0].message.content;
+        const response4 = await makeRequestWithDelay(`https://tasks.aidevs.pl/answer/${token}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({answer: inpromptAnswer})
+        }, 10);
+        console.log('Answer from API', response4);
+    });
+})
+.catch(error => console.error('Error:', error));
+fetch('https://tasks.aidevs.pl/token/embedding', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({apikey: APIKey})
+})
+.then(async (response) => {
+    const data = await response.json();
+    const token = data.token;
+    const url = `https://tasks.aidevs.pl/task/${token}`;
+
+    const response2 = await makeRequestWithDelay(url, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    }, 10);
+    console.log(response2);
+    await embedding ({
+        model: 'text-embedding-ada-002',
+        input: 'Hawaiian pizza'
+    }).then(async (response) => {
+        embeddingAnswer = response.data[0].embedding
+        const response4 = await makeRequestWithDelay(`https://tasks.aidevs.pl/answer/${token}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({answer: embeddingAnswer})
+        }, 10);
+        console.log('Answer from API', response4);
+    });
 })
 .catch(error => console.error('Error:', error));

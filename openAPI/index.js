@@ -22,7 +22,11 @@ export async function moderations (input) {
         body: JSON.stringify({ input })
     });
 }
+export async function embedding(createObject) {
+    return await openai.embeddings.create(createObject);
+}
 export default {
     moderations,
-    chatCompletion
+    chatCompletion,
+    embedding
 }
