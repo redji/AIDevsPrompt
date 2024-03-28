@@ -1,14 +1,17 @@
 import fetch from 'node-fetch';
 //import shouldStringBeAllowed from './openAPI/moderation/moderate'
 import { config } from 'dotenv';
-import { chatCompletion, embedding } from './openAPI/index.js';
+import { chatCompletion, embedding, transcript } from './openAPI/index.js';
 import { makeRequestWithDelay } from './utils/makeRequest.js';
 import FormData from 'form-data';
 import axios from 'axios'
+import fs from 'fs';
+import path from 'path';
 
 
 config();
 const APIKey = process.env['API_KEY'];
+const audioFilePath = new URL('mateusz.mp3', import.meta.url);
 
 let moderationAnswer = [];
 let blogAnswer = [];
@@ -16,6 +19,7 @@ let liarQuestion = "";
 let liarAnswer = [];
 let inpromptAnswer = [];
 let embeddingAnswer = [];
+let whisperAnswer = [];
 //helloApi
 fetch('https://tasks.aidevs.pl/token/helloapi', {
     method: 'POST',
@@ -252,3 +256,48 @@ fetch('https://tasks.aidevs.pl/token/embedding', {
     });
 })
 .catch(error => console.error('Error:', error));
+//whisper
+fetch('https://tasks.aidevs.pl/token/whisper', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ apikey: APIKey })
+})
+    .then(async (response) => {
+        const data = await response.json();
+        const token = data.token;
+        const taskUrl = `https://tasks.aidevs.pl/task/${token}`;
+        const response2 = await makeRequestWithDelay(taskUrl, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }, 10);
+        console.log(response2);
+
+        // Read the audio file from the file system
+        const audioFileData = fs.createReadStream(audioFilePath);
+
+        // Transcribe audio
+        transcript({
+            model: 'whisper-1',
+            file: audioFileData,
+            response_format: 'text'
+        })
+        .then(async (response) => {
+            whisperAnswer = response
+            const response4 = await makeRequestWithDelay(`https://tasks.aidevs.pl/answer/${token}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({answer: whisperAnswer})
+            }, 10);
+            console.log('Answer from API', response4);
+        })
+        .catch(error => {
+            console.error('Error transcribing audio file:', error);
+        });
+    })
+    .catch(error => console.error('Error:', error));

@@ -25,8 +25,12 @@ export async function moderations (input) {
 export async function embedding(createObject) {
     return await openai.embeddings.create(createObject);
 }
+export async function transcript(createObject) {
+    return await openai.audio.transcriptions.create(createObject);
+}
 export default {
     moderations,
     chatCompletion,
-    embedding
+    embedding,
+    transcript
 }
