@@ -20,7 +20,8 @@ let liarAnswer = [];
 let inpromptAnswer = [];
 let embeddingAnswer = [];
 let whisperAnswer = [];
-//helloApi
+let functionAnswer = [];
+// //helloApi
 fetch('https://tasks.aidevs.pl/token/helloapi', {
     method: 'POST',
     headers: {
@@ -301,3 +302,64 @@ fetch('https://tasks.aidevs.pl/token/whisper', {
         });
     })
     .catch(error => console.error('Error:', error));
+//function
+fetch('https://tasks.aidevs.pl/token/functions', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ apikey: APIKey })
+})
+    .then(async (response) => {
+        const data = await response.json();
+        const token = data.token;
+        const taskUrl = `https://tasks.aidevs.pl/task/${token}`;
+        const response2 = await makeRequestWithDelay(taskUrl, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }, 10);
+        console.log(response2.msg + response2.hint1)
+        const responseFromChat = await chatCompletion({
+            messages: [{
+                role: 'system', content: `
+                    Return everything in JSON format.
+                    Follow answer format: 
+                    {
+                        "name": "[function name]"
+                        "description": "[function description]"
+                        "parameters": {
+                            type: "object"
+                            properties: {
+                            property name: {
+                                "type": "parameter type",
+                                "description": "parameter description",
+                            }
+                            }
+                        }
+                    }
+                    Don't wrap result in answer object
+                    `
+            }, { role: 'user', 
+                content: response2.msg + response2.hint1 }],
+            model: 'gpt-3.5-turbo-0125',
+            response_format: {
+                type: "json_object"
+            }
+        });
+        const functionAnswer = responseFromChat.choices[0].message.content;
+        console.log(functionAnswer);
+
+            const response4 = await makeRequestWithDelay(`https://tasks.aidevs.pl/answer/${token}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({answer: JSON.parse(functionAnswer)})
+            }, 10);
+            console.log('Answer from API', response4);  
+    })
+    .catch(error => console.error('Error:', error));
+    
+    
