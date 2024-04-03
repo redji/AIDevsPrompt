@@ -24,7 +24,7 @@ let functionAnswer = [];
 let RODOAnswer = [];
 let scraperAnswer = [];
 let whoamiAnswer = [];
-// //helloApi
+
 fetch('https://tasks.aidevs.pl/token/helloapi', {
     method: 'POST',
     headers: {
@@ -441,3 +441,48 @@ fetch('https://tasks.aidevs.pl/token/scraper', {
     });
 })
 .catch(error => console.error('Error:', error));
+
+fetch('https://tasks.aidevs.pl/token/whoami', {
+    
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ apikey: APIKey })
+})
+    .then(async (response) => {
+        const data = await response.json();
+        const token = data.token;
+        const taskUrl = `https://tasks.aidevs.pl/task/${token}`;
+        const response2 = await makeRequestWithDelay(taskUrl, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }, 10);
+        console.log(response2)
+        await chatCompletion({
+            messages: [
+                { 
+                    role: 'system', 
+                    content: response2.msg
+                },
+                { 
+                    role: 'user', 
+                    content: response2.hint
+                }],
+            model: 'gpt-4-turbo-preview',
+        }).then(async (response) => {
+            whoamiAnswer = response.choices[0].message.content;
+            console.log(whoamiAnswer)
+            const response4 = await makeRequestWithDelay(`https://tasks.aidevs.pl/answer/${token}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({answer: whoamiAnswer})
+            }, 10);
+            console.log('Answer from API', response4);
+        });
+    })
+    .catch(error => console.error('Error:', error));
