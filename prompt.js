@@ -21,6 +21,9 @@ let inpromptAnswer = [];
 let embeddingAnswer = [];
 let whisperAnswer = [];
 let functionAnswer = [];
+let RODOAnswer = [];
+let scraperAnswer = [];
+let whoamiAnswer = [];
 // //helloApi
 fetch('https://tasks.aidevs.pl/token/helloapi', {
     method: 'POST',
@@ -184,7 +187,7 @@ fetch('https://tasks.aidevs.pl/token/liar', {
         });
 })
 .catch(error => console.error('Error:', error));
-inprompt
+// inprompt
 fetch('https://tasks.aidevs.pl/token/inprompt', {
     method: 'POST',
     headers: {
@@ -302,15 +305,14 @@ fetch('https://tasks.aidevs.pl/token/whisper', {
         });
     })
     .catch(error => console.error('Error:', error));
-//function
 fetch('https://tasks.aidevs.pl/token/functions', {
+    
     method: 'POST',
     headers: {
         'Content-Type': 'application/json'
     },
     body: JSON.stringify({ apikey: APIKey })
-})
-    .then(async (response) => {
+    }).then(async (response) => {
         const data = await response.json();
         const token = data.token;
         const taskUrl = `https://tasks.aidevs.pl/task/${token}`;
@@ -361,5 +363,81 @@ fetch('https://tasks.aidevs.pl/token/functions', {
             console.log('Answer from API', response4);  
     })
     .catch(error => console.error('Error:', error));
+fetch('https://tasks.aidevs.pl/token/rodo', {
     
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ apikey: APIKey })
+})
+    .then(async (response) => {
+        const data = await response.json();
+        const token = data.token;
+        const taskUrl = `https://tasks.aidevs.pl/task/${token}`;
+        const response2 = await makeRequestWithDelay(taskUrl, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }, 10);
+        console.log(response2)
     
+        const RODOAnswer = `Tell me about yourself sharing as much information as you know, but instead of sharing sensitive dat like your name, surname occupation or city you live in put placeholders %imie% in place of your name, %nazwisko% in place of your surname, %zawod% in place of your occupation, %miasto% in place of your city or town respectively in your answer. Your answer include all data about you.`
+        console.log(functionAnswer);
+
+            const response4 = await makeRequestWithDelay(`https://tasks.aidevs.pl/answer/${token}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ answer: RODOAnswer })
+            }, 10);
+            console.log('Answer from API', response4);  
+    })
+    .catch(error => console.error('Error:', error));
+fetch('https://tasks.aidevs.pl/token/scraper', {
+    
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ apikey: APIKey })
+})
+    .then(async (response) => {
+        const data = await response.json();
+        const token = data.token;
+        const taskUrl = `https://tasks.aidevs.pl/task/${token}`;
+        const response2 = await makeRequestWithDelay(taskUrl, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }, 10);
+        console.log(response2)
+
+    await chatCompletion({
+        messages: [
+            { 
+                role: 'system', 
+                content: response2.msg
+            },
+            { 
+                role: 'user', 
+                content: response2.input + response2.question
+            }],
+        model: 'gpt-3.5-turbo',
+    }).then(async (response) => {
+        scraperAnswer = response.choices[0].message.content;
+        console.log(scraperAnswer)
+        const response4 = await makeRequestWithDelay(`https://tasks.aidevs.pl/answer/${token}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({answer: scraperAnswer})
+        }, 10);
+        console.log('Answer from API', response4);
+    });
+})
+.catch(error => console.error('Error:', error));
