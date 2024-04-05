@@ -3,10 +3,14 @@ import fetch from 'node-fetch';
 import { config } from 'dotenv';
 import { chatCompletion, embedding, transcript } from './openAPI/index.js';
 import { makeRequestWithDelay } from './utils/makeRequest.js';
+import { loadEmbeddingsFromFile, embedTextData, findSimilar } from './embeddings/index.js'
+import { fetchJSONData } from './io/index.js';
 import FormData from 'form-data';
 import axios from 'axios'
 import fs from 'fs';
 import path from 'path';
+import tf from '@tensorflow/tfjs-node';
+import * as use from '@tensorflow-models/universal-sentence-encoder';
 
 
 config();
@@ -24,6 +28,8 @@ let functionAnswer = [];
 let RODOAnswer = [];
 let scraperAnswer = [];
 let whoamiAnswer = [];
+let embeddingsTensor = {};
+let searchAnswer = ""
 
 fetch('https://tasks.aidevs.pl/token/helloapi', {
     method: 'POST',
@@ -484,5 +490,84 @@ fetch('https://tasks.aidevs.pl/token/whoami', {
             }, 10);
             console.log('Answer from API', response4);
         });
+    })
+    .catch(error => console.error('Error:', error));
+fetch('https://tasks.aidevs.pl/token/search', {
+    
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ apikey: APIKey })
+})
+    .then(async (response) => {
+        const data = await response.json();
+        const token = data.token;
+        const taskUrl = `https://tasks.aidevs.pl/task/${token}`;
+        const response2 = await makeRequestWithDelay(taskUrl, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }, 10);
+        console.log(response2)
+		const query = response2.question; // Example user query
+		const queryEmbedding = await embedTextData(query);
+		const embeddingsFilePath = 'embeddings.json';
+		embeddingsTensor = await loadEmbeddingsFromFile(embeddingsFilePath);
+        const jsonDataUrl = 'https://unknow.news/archiwum_aidevs.json';
+        const jsonData = await fetchJSONData(jsonDataUrl);
+
+        // Step 2: Extract content from JSON data
+        const contentData = jsonData.map(entry => entry.info);
+
+		// Step 6: Perform similarity search or other operations based on the query embedding
+		const similarURLs = findSimilar(embeddingsTensor, queryEmbedding, contentData, 5); // Find top 5 similar URLs
+		console.log('Top 5 similar URLs:', similarURLs);
+		searchAnswer = jsonData[0].url
+        console.log(searchAnswer)
+        const response4 = await makeRequestWithDelay(`https://tasks.aidevs.pl/answer/${token}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({answer: searchAnswer})
+            }, 10);
+            console.log('Answer from API', response4);
+        
+        //     const response4 = await makeRequestWithDelay(`https://tasks.aidevs.pl/answer/${token}`, {
+        //         method: 'POST',
+        //         headers: {
+        //             'Content-Type': 'application/json'
+        //         },
+        //         body: JSON.stringify({answer: whoamiAnswer})
+        //     }, 10);
+        //     console.log('Answer from API', response4);
+        
+		// Read JSON data from files
+		
+        // await chatCompletion({
+        //     messages: [
+        //         { 
+        //             role: 'system', 
+        //             content: response2.msg
+        //         },
+        //         { 
+        //             role: 'user', 
+        //             content: response2.hint
+        //         }],
+        //     model: 'gpt-4-turbo-preview',
+        // }).then(async (response) => {
+        //     whoamiAnswer = response.choices[0].message.content;
+        //     console.log(whoamiAnswer)
+        //     const response4 = await makeRequestWithDelay(`https://tasks.aidevs.pl/answer/${token}`, {
+        //         method: 'POST',
+        //         headers: {
+        //             'Content-Type': 'application/json'
+        //         },
+        //         body: JSON.stringify({answer: whoamiAnswer})
+        //     }, 10);
+        //     console.log('Answer from API', response4);
+        // });
     })
     .catch(error => console.error('Error:', error));
