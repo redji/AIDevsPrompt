@@ -5,7 +5,6 @@ export async function fetchJSONData(url) {
         const response = await axios.get(url);
         return response.data;
     } catch (error) {
-        console.error('Error fetching JSON data:', error);
         throw error;
     }
 }
