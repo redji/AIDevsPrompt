@@ -33,6 +33,7 @@ let embeddingsTensor = {};
 let searchAnswer = "";
 let peopleAnswer = "";
 let knowledgeAnswer = "";
+let toolsAnswer = "";
 
 fetch('https://tasks.aidevs.pl/token/helloapi', {
     method: 'POST',
@@ -683,3 +684,47 @@ fetch('https://tasks.aidevs.pl/token/knowledge', {
     })
     .catch(error => console.error('Error:', error));
 });
+fetch('https://tasks.aidevs.pl/token/tools', {
+    
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ apikey: APIKey })
+})
+    .then(async (response) => {
+        const data = await response.json();
+        const token = data.token;
+        const taskUrl = `https://tasks.aidevs.pl/task/${token}`;
+        const response2 = await makeRequestWithDelay(taskUrl, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }, 10);
+        console.log(response2)
+        await chatCompletion({
+            messages: [
+                { 
+                    role: 'system', 
+                    content: response2.msg + response2.hint + '. You must follow the format: { "tool": "UppercaseToolName", "desc": "descriptionOfTask", "date": "optionalDateOfEvent"'
+                },
+                { 
+                    role: 'user', 
+                    content: response2.question
+                }],
+            model: 'gpt-4',
+        }).then(async (response) => {
+            console.log(response.choices[0].message.content);
+            toolsAnswer = response.choices[0].message.content;
+            const response4 = await makeRequestWithDelay(`https://tasks.aidevs.pl/answer/${token}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({answer: JSON.parse(toolsAnswer)})
+            }, 10);
+            console.log('Answer from API', response4);
+        });
+    })
+    .catch(error => console.error('Error:', error));
