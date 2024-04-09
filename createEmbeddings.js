@@ -6,7 +6,8 @@ import JSONStream from 'JSONStream';
 import {QdrantClient} from '@qdrant/js-client-rest';
 const client = new QdrantClient({url: 'http://127.0.0.1:6333'});
 
-const jsonDataUrl = 'https://unknow.news/archiwum_aidevs.json';
+// const jsonDataUrl = 'https://unknow.news/archiwum_aidevs.json';
+const jsonDataUrl = 'https://tasks.aidevs.pl/data/people.json';
 const embeddingsFilePath = 'embeddings.json';
  
 async function fetchJSONData(url) {
@@ -22,7 +23,7 @@ async function processInBatchesAndSaveToJSON() {
         const jsonData = await fetchJSONData(jsonDataUrl);
         for (let i = 0; i<jsonData.length; i++) {
 			let entry = jsonData[i];
-			await generateEmbeddings(entry.title + ' ' + entry.info).then(async (response) => {
+			await generateEmbeddings(entry.imie + ' ' + entry.nazwisko).then(async (response) => {
 				fs.appendFileSync(embeddingsFilePath, JSON.stringify({...response}) + '\n');
 				console.log('Processed: ' + i + '.');
 			})
@@ -70,7 +71,7 @@ async function addToDBFromJSON () {
 					}]
 				}
 				id++;
-				const operation_info = await client.upsert('test_collection4', upsertObject)
+				const operation_info = await client.upsert('knowledgeDB', upsertObject)
 				console.log(operation_info);
 			}
 		});
@@ -142,5 +143,5 @@ async function addToDBFromJSON () {
 
 
 
-processInBatchesAndSaveToJSON();
-// addToDBFromJSON();
+// processInBatchesAndSaveToJSON();
+addToDBFromJSON();
