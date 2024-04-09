@@ -11,7 +11,8 @@ import fs from 'fs';
 import path from 'path';
 import {QdrantClient} from '@qdrant/js-client-rest';
 const client = new QdrantClient({url: 'http://127.0.0.1:6333'});
-import Fuse from 'fuse.js'
+import https from 'https';
+import xml2js from 'xml2js';
 
 config();
 const APIKey = process.env['API_KEY'];
@@ -31,6 +32,7 @@ let whoamiAnswer = [];
 let embeddingsTensor = {};
 let searchAnswer = "";
 let peopleAnswer = "";
+let knowledgeAnswer = "";
 
 fetch('https://tasks.aidevs.pl/token/helloapi', {
     method: 'POST',
@@ -579,3 +581,105 @@ fetch('https://tasks.aidevs.pl/token/people', {
         });
     })
     .catch(error => console.error('Error:', error));
+async function fetchXMLfromURL(url) {
+    const parser = new xml2js.Parser();
+
+    parser.addListener('end', function(result) {
+        console.log('Done.');
+        return result;
+    });
+    https.get(url, function(result) {
+        result.on('data', function (data) {
+            parser.parseString(data);
+        }).on('error', function(e) {
+            console.log('Got error: ' + e.message);
+        });
+    });
+};
+fetch('https://tasks.aidevs.pl/token/knowledge', {
+    
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ apikey: APIKey })
+})
+    .then(async (response) => {
+        const data = await response.json();
+        const token = data.token;
+        const taskUrl = `https://tasks.aidevs.pl/task/${token}`;
+        const response2 = await makeRequestWithDelay(taskUrl, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }, 10);
+        console.log(response2)
+        await chatCompletion({
+            messages: [
+                { 
+                    role: 'system', 
+                    content: 'Do jakej kategori najlepiej pasuje pytanie: kurs walutowy, wiedza ogólna, populacja kraju? Zwróć odpowiedź w formacie JSON o następującej strukturze: { kategoria: "wybrana_przez_ciebie_kategoria", kraj: "jeżeli_dotyczy_zwróć_nazwę_kraju_po_angielsku", waluta: "jeżeli_dotyczy_zwróć_skrót_waluty" }. Ustaw null w wartościach pól, które nie są związane z pytaniem. Format waluty: a three- letter currency code (ISO 4217 standard).'
+                },
+                { 
+                    role: 'user', 
+                    content: 'Pytanie: ' + response2.question
+                }],
+            model: 'gpt-3.5-turbo',
+        }).then(async (response) => {
+            const knowledgeCategorization = JSON.parse(response.choices[0].message.content);
+            console.log(knowledgeCategorization.kategoria)
+            switch (knowledgeCategorization.kategoria) {
+                case 'kurs walutowy':
+                    const kurs = await fetchJSONData('https://api.nbp.pl/api/exchangerates/rates/a/' + knowledgeCategorization.waluta);
+                    const response = await makeRequestWithDelay(`https://tasks.aidevs.pl/answer/${token}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({answer: kurs.rates[0].mid})
+                    }, 10);
+                    console.log('Answer from API', response);
+                    break;
+                case 'populacja kraju':
+                    const jsonDataUrl = 'https://restcountries.com/v3.1/name/' + knowledgeCategorization.kraj
+                    const jsonData = await fetchJSONData(jsonDataUrl);
+
+                    const response4 = await makeRequestWithDelay(`https://tasks.aidevs.pl/answer/${token}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({answer: jsonData[0].population})
+                    }, 10);
+                    break;
+                   
+                case 'wiedza ogólna':
+                    console.log('wiedza ogólna - wszedłem')
+                    await chatCompletion({
+                        messages: [
+                            { 
+                                role: 'system', 
+                                content: 'Odpowiedz na pytanie z wiedzy ogólnej. Pytanie: '
+                            },
+                            { 
+                                role: 'user', 
+                                content: response2.question
+                            }],
+                            model: 'gpt-3.5-turbo',
+                    }).then(async (response) => {
+                        knowledgeAnswer = response.choices[0].message.content;
+                        const response4 = await makeRequestWithDelay(`https://tasks.aidevs.pl/answer/${token}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({answer: knowledgeAnswer})
+                        }, 10);
+                        console.log('Answer from API', response4);
+                    });
+                    break;
+            }
+    })
+    .catch(error => console.error('Error:', error));
+});
