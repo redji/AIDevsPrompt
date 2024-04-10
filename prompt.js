@@ -34,6 +34,7 @@ let searchAnswer = "";
 let peopleAnswer = "";
 let knowledgeAnswer = "";
 let toolsAnswer = "";
+let gnomeAnswer = "";
 
 fetch('https://tasks.aidevs.pl/token/helloapi', {
     method: 'POST',
@@ -723,6 +724,57 @@ fetch('https://tasks.aidevs.pl/token/tools', {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({answer: JSON.parse(toolsAnswer)})
+            }, 10);
+            console.log('Answer from API', response4);
+        });
+    })
+    .catch(error => console.error('Error:', error));
+fetch('https://tasks.aidevs.pl/token/gnome', {
+    
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ apikey: APIKey })
+})
+    .then(async (response) => {
+        const data = await response.json();
+        const token = data.token;
+        const taskUrl = `https://tasks.aidevs.pl/task/${token}`;
+        const response2 = await makeRequestWithDelay(taskUrl, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }, 10);
+        console.log(response2)
+        await chatCompletion({
+            messages: [
+                {
+                    role: "user",
+                    content: [
+                    { 
+                        type: "text", 
+                        text: response2.msg + response2.hint + "Albo zwróć samą nazwę koloru, albo słowo ERROR"
+                    },
+                    {
+                        type: "image_url",
+                        image_url: {
+                          url: response2.url,
+                        }
+                    }],
+                  }],
+            model: 'gpt-4-turbo',
+            max_tokens: 300
+        }).then(async (response) => {
+            console.log(response.choices[0].message.content);
+            gnomeAnswer = response.choices[0].message.content;
+            const response4 = await makeRequestWithDelay(`https://tasks.aidevs.pl/answer/${token}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({answer: gnomeAnswer})
             }, 10);
             console.log('Answer from API', response4);
         });
