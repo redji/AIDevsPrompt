@@ -823,3 +823,89 @@ fetch('https://tasks.aidevs.pl/token/ownapi', {
     //         console.log(data);
     // })
     // .catch(error => console.error('Error:', error));
+
+ fetch('https://tasks.aidevs.pl/token/ownapipro', {
+    
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ apikey: APIKey })
+})
+    .then(async (response) => {
+        const data = await response.json();
+        const token = data.token;
+        const taskUrl = `https://tasks.aidevs.pl/task/${token}`;
+        const response2 = await makeRequestWithDelay(taskUrl, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }, 10);
+        console.log(response2)
+        const response4 = await makeRequestWithDelay(`https://tasks.aidevs.pl/answer/${token}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({answer: 'https://frog01-21730.wykr.es/chat'})
+        }, 10);
+        console.log('Answer from API', response4);
+    })
+    .catch(error => console.error('Error:', error));
+
+// Example chat
+// fetch('http://localhost:3000/chat', {
+    
+//     method: 'POST',
+//     headers: {
+//         'Content-Type': 'application/json'
+//     },
+//     body: JSON.stringify({ question: "I'm 5 years old. How old am I?" })
+// })
+//     .then(async (response) => {
+//         const data = await response.json();
+//         const answer = data.reply;
+//         console.log(answer);
+//         fetch('http://localhost:3000/chat', {
+    
+//             method: 'POST',
+//             headers: {
+//                 'Content-Type': 'application/json'
+//             },
+//             body: JSON.stringify({ question: "My name is Mike. How old am I?" })
+//         }).then(async (response) => {
+//             const data = await response.json();
+//             const answer = data.reply;
+//             console.log(answer);
+//             fetch('http://localhost:3000/chat', {
+    
+//                 method: 'POST',
+//                 headers: {
+//                     'Content-Type': 'application/json'
+//                 },
+//                 body: JSON.stringify({ question: "What's my name? I'm from Ohio." })
+//             }).then(async (response) => {
+//                 const data = await response.json();
+//                 const answer = data.reply;
+//                 console.log(answer);
+//             });
+//         });
+//         // const taskUrl = `https://tasks.aidevs.pl/task/${token}`;
+//         // const response2 = await makeRequestWithDelay(taskUrl, {
+//         //     method: 'GET',
+//         //     headers: {
+//         //         'Content-Type': 'application/json'
+//         //     }
+//         // }, 10);
+//         // console.log(response2)
+//         // const response4 = await makeRequestWithDelay(`https://tasks.aidevs.pl/answer/${token}`, {
+//         //     method: 'POST',
+//         //     headers: {
+//         //         'Content-Type': 'application/json'
+//         //     },
+//         //     body: JSON.stringify({answer: 'https://frog01-21730.wykr.es/answer'})
+//         // }, 10);
+//         // console.log('Answer from API', response4);
+//     })
+//     .catch(error => console.error('Error:', error));
