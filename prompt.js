@@ -13,6 +13,7 @@ import {QdrantClient} from '@qdrant/js-client-rest';
 const client = new QdrantClient({url: 'http://127.0.0.1:6333'});
 import https from 'https';
 import xml2js from 'xml2js';
+const jsonDataUrl = 'https://tasks.aidevs.pl/data/3friends.json';
 
 config();
 const APIKey = process.env['API_KEY'];
@@ -963,15 +964,101 @@ fetch('https://tasks.aidevs.pl/token/meme', {
 
         })
         .catch(error => console.error('Error:', error));
-
-        
-        // const response4 = await makeRequestWithDelay(`https://tasks.aidevs.pl/answer/${token}`, {
+fetch('https://tasks.aidevs.pl/token/optimaldb', {    
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ apikey: APIKey })
+})
+    .then(async (response) => {
+        const data = await response.json();
+        const token = data.token;
+        const taskUrl = `https://tasks.aidevs.pl/task/${token}`;
+        const response2 = await makeRequestWithDelay(taskUrl, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }, 10);
+        console.log(response2)
+        let optimizedDB = ''
+        try {
+            const jsonData = await fetchJSONData(jsonDataUrl);
+            let a = 0;
+            for (let key in jsonData) {
+                // Check if the key is a property of the object itself
+                if (jsonData.hasOwnProperty(key)) {
+                  // Call the action function with the key and its corresponding value
+                  console.log(key)
+                  await chatCompletion({
+                    messages: [{ role: 'user', content: 'Reformat given text to contain all information and not exceed 3kb. Text: ' + jsonData[key].join('') }],
+                    model: 'gpt-3.5-turbo',
+                }).then(async (response) => {
+                    optimizedDB += response.choices[0].message.content
+                    a++;
+                    if (a === 3) {
+                        const response4 = await makeRequestWithDelay(`https://tasks.aidevs.pl/answer/${token}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({answer: optimizedDB})
+                        }, 10);
+                        console.log(response4);
+                    }
+                });
+              }
+            }
+            // for (let i = 0; i<jsonData.length; i++) {
+            // 	let entry = jsonData[i];
+            // }
+        } catch (error) {
+            console.error('An error occurred:', error);
+        }
+        // fetch('https://get.renderform.io/api/v2/render', {    
         //     method: 'POST',
         //     headers: {
-        //         'Content-Type': 'application/json'
+        //         'Content-Type': 'application/json',
+        //         'X-API-KEY': 'key-XZc3QNWlmEqDUremH04CUjntXDE75bCED6'
         //     },
-        //     body: JSON.stringify({answer: 'https://frog01-21730.wykr.es/chat'})
-        // }, 10);
-        // console.log('Answer from API', response4);
-    })
-    .catch(error => console.error('Error:', error));
+        //     body: JSON.stringify({
+        //         template: 'silly-hares-race-loosely-1467',
+        //         data: {
+        //         'title.text': '#FFFFFF',
+        //         'title.text': response2.text,
+        //         'image.src': response2.image
+        //     },
+        //     "fileName": "automation-meme",
+        //     "version": "my-cache-key",
+        //     "metadata": {
+        //       "my-text.text": "Automation"
+        //     },
+        //     "batchName": "my-batch-name"
+        // })
+        // }).then(async (response) => {
+        //     const data = await response.json();
+        //     memeAnwser = data.href;
+        //     const response4 = await makeRequestWithDelay(`https://tasks.aidevs.pl/answer/${token}`, {
+        //         method: 'POST',
+        //         headers: {
+        //             'Content-Type': 'application/json'
+        //         },
+        //         body: JSON.stringify({answer: memeAnwser})
+        //     }, 10);
+        //     console.log(response4);
+
+        })
+        .catch(error => console.error('Error:', error));
+
+        
+//         // const response4 = await makeRequestWithDelay(`https://tasks.aidevs.pl/answer/${token}`, {
+//         //     method: 'POST',
+//         //     headers: {
+//         //         'Content-Type': 'application/json'
+//         //     },
+//         //     body: JSON.stringify({answer: 'https://frog01-21730.wykr.es/chat'})
+//         // }, 10);
+//         // console.log('Answer from API', response4);
+//     })
+//     .catch(error => console.error('Error:', error));
