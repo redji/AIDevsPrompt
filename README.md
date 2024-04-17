@@ -1,6 +1,6 @@
  
  npm i
- rename .env-example to to .env, provide your API_KEY and OPEN_API_KEY
+ rename .env-example to .env, provide your API_KEY and OPEN_API_KEY
  node prompt.js
  docker pull qdrant/qdrant
  docker run -p 6333:6333 qdrant/qdrant
