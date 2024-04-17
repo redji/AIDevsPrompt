@@ -9,10 +9,12 @@ const { fetchJSONData } = require('./io/index.js');
 const { chatCompletion } = require('./openAPI/index.js');
 const JSONStream = require('JSONStream');
 const fs = require('fs');
+const { getJson } = require("serpapi");
 
 const chatFilePath = 'chat.json';
 
 const APIKey = process.env['API_KEY'];
+const SERPAPIKEy = process.env['SERP_API'];
 
 app.use(bodyParser.json());
 app.post('/answer/', async (req, res) => {
@@ -137,6 +139,18 @@ app.post('/answer/', async (req, res) => {
 app.get('/', (req, res) => {
   res.send('Hello, Aiva!');
 });
+app.post('/search', (req, res) => {
+	const jsonData = req.body;
+		getJson({
+		engine: "google",
+		api_key: SERPAPIKEy, // Get your API_KEY from https://serpapi.com/manage-api-key
+		q: jsonData.question,
+		location: "Austin, Texas",
+		}, (json) => {
+			console.log(json["organic_results"]);
+			res.json({ reply: json["organic_results"][0].link });
+		});
+  });
 app.get('/clearJSON', (req, res) => {
 	fs.writeFileSync(chatFilePath, '');
 	res.send('JSon Cleared!');

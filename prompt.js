@@ -1013,3 +1013,46 @@ fetch('https://tasks.aidevs.pl/token/optimaldb', {
             console.error('An error occurred:', error);
         }})
         .catch(error => console.error('Error:', error));
+
+fetch('https://tasks.aidevs.pl/token/google', {    
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ apikey: APIKey })
+})
+    .then(async (response) => {
+        const data = await response.json();
+        const token = data.token;
+        const taskUrl = `https://tasks.aidevs.pl/task/${token}`;
+        const response2 = await makeRequestWithDelay(taskUrl, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }, 10);
+        console.log(response2)
+        const response4 = await makeRequestWithDelay(`https://tasks.aidevs.pl/answer/${token}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({answer: 'https://frog01-21730.wykr.es/search'})
+            }, 10);
+            console.log('Answer from API', response4);
+        })
+        .catch(error => console.error('Error:', error));
+
+    // Example URL search
+    // fetch('https://frog01-21730.wykr.es/search', {  
+    //     method: 'POST',
+    //     headers: {
+    //         'Content-Type': 'application/json'
+    //     },
+    //     body: JSON.stringify({ question: "What is the weather today?" })
+    // })
+    //     .then(async (response) => {
+    //         const data = await response.json();
+    //         console.log(data.reply);
+    // })
+    // .catch(error => console.error('Error:', error));
