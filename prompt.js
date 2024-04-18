@@ -1056,3 +1056,51 @@ fetch('https://tasks.aidevs.pl/token/google', {
     //         console.log(data.reply);
     // })
     // .catch(error => console.error('Error:', error));
+
+fetch('https://tasks.aidevs.pl/token/md2html', {    
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ apikey: APIKey })
+})
+    .then(async (response) => {
+        const data = await response.json();
+        const token = data.token;
+        const taskUrl = `https://tasks.aidevs.pl/task/${token}`;
+        const response2 = await makeRequestWithDelay(taskUrl, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }, 10);
+        console.log(response2)
+        await chatCompletion({
+            messages: [{
+                role: 'system',
+                content: `
+                   1) You will get input in markdown like this: "## This is _important_ and **very cool**"
+                   2) Use your knowledge to convert this input into HTML. Result should look like:
+                   "<h2>This is <u>important</u> and <span class=\"bold\">very cool</span></h1>"
+                   Rules:
+                   1. Don't add any additional spaces and new lines
+                   2. BOLD in this task is <span class="bold">any text</span>
+                   Input:
+                `
+            },{ 
+                role: 'user', 
+                content: response2.input }],
+            model: 'gpt-3.5-turbo',
+        }).then(async (response) => {
+            console.log(response.choices[0].message.content)
+            const response4 = await makeRequestWithDelay(`https://tasks.aidevs.pl/answer/${token}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({answer: response.choices[0].message.content })
+            }, 10);
+            console.log('Answer from API', response4);
+        });
+        })
+        .catch(error => console.error('Error:', error));
